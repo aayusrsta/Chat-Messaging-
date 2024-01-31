@@ -45,9 +45,11 @@ interface MessageProps {
     createdAt: Timestamp;
   };
   user1: string;
+  getSenderName?: (userId: string) => string;
+
 }
 
-const Message: React.FC<MessageProps> = ({ msg, user1 }) => {
+const Message: React.FC<MessageProps> = ({ msg, user1, getSenderName}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,6 +61,7 @@ const Message: React.FC<MessageProps> = ({ msg, user1 }) => {
       className={`message_wrapper ${msg.from === user1 ? "own" : ""}`}
       ref={scrollRef}
     >
+      <p>{getSenderName ? getSenderName(msg.from) : ""}</p>
       <p className={msg.from === user1 ? "me" : "friend"}>
         {msg.text}
         <br />

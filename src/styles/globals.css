@@ -398,10 +398,14 @@ input{
     display: flex;
     align-items: center;
   }
-  .user_detail h4 {
+  .user_detail h4,
+  .group_detail h4 {
     margin-left: 10px;
   }
-  
+
+  .groups_container{
+    margin-top: 15px;
+  }
   .user_status {
     width: 10px;
     height: 10px;
@@ -419,29 +423,30 @@ input{
     color: white;
   }
   .no_conv {
-    font-size: 20px;
-    color: white;
+    font-size: 25px;
+    color: var(--color-2);
     text-align: center;
+    font-weight: 600;
   }
   .message_form {
-    position: absolute;
-    bottom: 0;
-    left: 20%;
+    
     width: 100%;
     height: 30px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    margin-top: 25px;
   }
   .message_form input {
-    width: 40vw;
-    margin: 0px 10px 10px;
+    width: 65vw;
+    margin: 0px 10px 0px 0px;
     padding: 10px;
-    border-radius: 5px;
+    border-radius: 50px;
     outline: none;
     border: none;
   }
   .message_form .btn {
-    margin-top: -10px;
+    padding: 5px 10px;
   }
   .messages {
     height: calc(100vh - 200px);
@@ -488,4 +493,18 @@ input{
     display: none;
   }
   
-  
+  .user_detail:hover,
+  .group_detail:hover{
+    color: #88dded;
+  }
+  p.primary-text{
+    font-size: 20px;
+  }
+
+  .create-button{
+    border: 1px solid white;
+    background: wheat;
+    padding: 5px;
+    border-radius: 15px;
+    margin: 15px;
+  }

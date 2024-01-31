@@ -91,7 +91,9 @@ const Home: React.FC<HomeProps> = () => {
   const handleCreateGroup = () => {
     setIsCreatingGroup(true);
   };
-
+  const cancelCreateGroup=()=>{
+    setIsCreatingGroup(false);
+  }
   const handleAddMember = (userId: string) => {
     setSelectedMembers((prevMembers) => [...prevMembers, userId]);
   };
@@ -253,7 +255,11 @@ const Home: React.FC<HomeProps> = () => {
   //   setSelectedGroup(selectedGroup || null);
   // };
   console.log("USERRSSS", users);
-
+  const getSenderName = (userId: string) => {
+    const sender = users.find((user) => user.uid === userId);
+    return sender ? sender.name : '';
+  };
+  
   return (
     <div className="home_container">
       <div>
@@ -272,7 +278,7 @@ const Home: React.FC<HomeProps> = () => {
           />
         ))}
         <div className="groups_container">
-          <h3>Groups:</h3>
+          <p className="primary-text">Groups:</p>
           {groupChats.map((group) => (
             <Group
               key={group.id}
@@ -282,7 +288,7 @@ const Home: React.FC<HomeProps> = () => {
             />
           ))}
           <div className="group_creation">
-            <button onClick={handleCreateGroup}>Create Group</button>
+            <button onClick={handleCreateGroup} className="create-button">Create Group</button>
             {isCreatingGroup && (
               <div className="group_form">
                 <input
@@ -294,10 +300,13 @@ const Home: React.FC<HomeProps> = () => {
                 <p>Selected Members:</p>
                 <ul>
                   {selectedMembers.map((member) => (
-                    <li key={member}>{/* Display selected members here */}</li>
+                    <li key={member}> </li>
                   ))}
                 </ul>
-                <button onClick={handleCreateGroupSubmit}>Create Group</button>
+                <div>
+                <button  onClick={handleCreateGroupSubmit}>Create +</button>
+                <p onClick={cancelCreateGroup} style={{cursor:'pointer'}}>Cancel</p>
+                </div>
               </div>
             )}
           </div>
@@ -330,7 +339,7 @@ const Home: React.FC<HomeProps> = () => {
             <div className="messages">
               {msgs.length
                 ? msgs.map((msg, i) => (
-                    <Message key={i} msg={msg} user1={user1} />
+                    <Message key={i} msg={msg} user1={user1} getSenderName={getSenderName}/>
                   ))
                 : null}
             </div>
