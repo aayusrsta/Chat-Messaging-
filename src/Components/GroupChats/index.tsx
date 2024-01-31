@@ -16,9 +16,11 @@ interface GroupProps {
   };
   onSelectGroup: (group: GroupChat) => void;
   user1: string;
+  handleAddMembersToGroup: (group: GroupChat) => void; // Add this line
+
 }
 
-const Group: React.FC<GroupProps> = ({ group, onSelectGroup, user1 }) => {
+const Group: React.FC<GroupProps> = ({ group, onSelectGroup, user1, handleAddMembersToGroup }) => {
   const isMember = group.members.includes(user1);
 
   return (
@@ -32,8 +34,12 @@ const Group: React.FC<GroupProps> = ({ group, onSelectGroup, user1 }) => {
           style={{ cursor: "pointer" }}
         >
           <h4>
-            {group.name} <p>Members: {group.members.length}</p>{" "}
+            {group.name} ({group.members.length})
           </h4>
+          {/* <p>Members: {group.members.length}</p> */}
+          {isMember && (
+      <button onClick={() => handleAddMembersToGroup(group)}>Add Members</button>
+    )}
         </div>
       </div>
     </div>

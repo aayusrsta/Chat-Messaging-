@@ -494,7 +494,7 @@ input{
   }
   
   .user_detail:hover,
-  .group_detail:hover{
+  .group_detail h4:hover{
     color: #88dded;
   }
   p.primary-text{
@@ -507,4 +507,29 @@ input{
     padding: 5px;
     border-radius: 15px;
     margin: 15px;
+  }
+  .group_detail{
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+  }
+  .group_detail button:hover{
+    color:green;
+  }
+  .add-members-section{
+    color: wheat;
+    margin-top: 15px;
+  }
+  .add-members-section h3{
+    font-size: 20px;
+    border-bottom: 1px solid wheat;
+  }
+  .available-users{
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .available-users button:hover{
+    color: greenyellow;
   }
