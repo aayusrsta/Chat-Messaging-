@@ -41,12 +41,12 @@ interface GroupChat {
   user1: string;
 }
 
-interface GroupMessageData {
-  text: string;
-  from: string;
-  createdAt: Timestamp;
-  media: string;
-}
+// interface GroupMessageData {
+//   text: string;
+//   from: string;
+//   createdAt: Timestamp;
+//   media: string;
+// }
 
 const Home: React.FC<HomeProps> = () => {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -149,7 +149,6 @@ const Home: React.FC<HomeProps> = () => {
       createdAt: Timestamp.fromDate(new Date()),
     });
 
-    setText("");
     setGroupName("");
     setSelectedMembers([]);
     setIsCreatingGroup(false);
@@ -157,6 +156,7 @@ const Home: React.FC<HomeProps> = () => {
 
   const selectGrp = async (group: GroupChat) => {
     setSelectedGroup(group);
+    setIsCreatingGroup(false);
     setChat(null);
 
     const id = group.id;
@@ -309,7 +309,7 @@ const Home: React.FC<HomeProps> = () => {
                   <div key={user.uid} className="available-users">
                     <span>{user.name}</span>
                     <button onClick={() => handleAddMemberToGroup(user.uid)}>
-                     Add +
+                      Add +
                     </button>
                   </div>
                 ))}
@@ -332,12 +332,12 @@ const Home: React.FC<HomeProps> = () => {
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                 />
-                <p>Selected Members:</p>
+                {/* <p>Selected Members:</p>
                 <ul>
                   {selectedMembers.map((member) => (
                     <li key={member}> </li>
                   ))}
-                </ul>
+                </ul> */}
                 <div>
                   <button onClick={handleCreateGroupSubmit}>Create +</button>
                   <p onClick={cancelCreateGroup} style={{ cursor: "pointer" }}>
