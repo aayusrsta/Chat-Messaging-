@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "../../firebase";
 import { setDoc, doc, Timestamp } from "firebase/firestore";
 import { useRouter } from "next/router";
@@ -43,6 +43,8 @@ const Register: React.FC<RegisterProps> = () => {
         email,
         password
       );
+      await updateProfile(result.user, { displayName: name });
+
       await setDoc(doc(db, "users", result.user.uid), {
         uid: result.user.uid,
         name,

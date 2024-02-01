@@ -1,5 +1,5 @@
 import React, { useEffect, useState, ChangeEvent, FormEvent } from "react";
-import { db, auth, storage } from "../../firebase";
+import { db, auth } from "../../firebase";
 import {
   collection,
   query,
@@ -13,7 +13,6 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
-import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
 import Message from "../../Components/Messages";
 import MessageForm from "@/Components/MessageForm";
 import User from "@/Components/User";
@@ -32,6 +31,7 @@ interface MessageData {
   to: string;
   createdAt: Timestamp;
   media: string;
+  createdBy:string;
 }
 
 interface GroupChat {
@@ -41,12 +41,6 @@ interface GroupChat {
   user1: string;
 }
 
-// interface GroupMessageData {
-//   text: string;
-//   from: string;
-//   createdAt: Timestamp;
-//   media: string;
-// }
 
 const Home: React.FC<HomeProps> = () => {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -62,7 +56,7 @@ const Home: React.FC<HomeProps> = () => {
   const [addingMembersToGroup, setAddingMembersToGroup] =
     useState<boolean>(false);
 
-  const handleAddMembersToGroup = (group: GroupChat) => {
+  const showAvailableUsers = (group: GroupChat) => {
     const usersNotInGroup = users.filter(
       (user) => !group.members.includes(user.uid)
     );
@@ -124,35 +118,48 @@ const Home: React.FC<HomeProps> = () => {
       prevMembers.filter((member) => member !== userId)
     );
   };
-
+  
   const handleCreateGroupSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+  
+    if (selectedMembers.length < 2) {
+      alert("Please select at least two users to create a group.");
+      return;
+    }
+  
+    if (!groupName.trim()) {
+      alert("Please enter a group name.");
+      return;
+    }
+  
     const groupData = {
       name: groupName,
       members: [...selectedMembers, user1],
     };
-
+  
     const groupRef = await addDoc(collection(db, "groups"), groupData);
-
+  
     const groupId = groupRef.id;
     const updatedGroupData = {
       ...groupData,
       id: groupId,
     };
-
+  
     // Update the group document with the correct id
     await setDoc(doc(db, "groups", groupId), updatedGroupData);
-
+  
     const groupMsgsRef = collection(db, "group_messages", groupId, "chat");
     await addDoc(groupMsgsRef, {
-      text,
       from: user1,
       createdAt: Timestamp.fromDate(new Date()),
+      createdBy:`${auth.currentUser?.displayName} created the group`
     });
-
+  
     setGroupName("");
     setSelectedMembers([]);
     setIsCreatingGroup(false);
   };
+  
 
   const selectGrp = async (group: GroupChat) => {
     setSelectedGroup(group);
@@ -267,15 +274,43 @@ const Home: React.FC<HomeProps> = () => {
     setText("");
   };
 
-  console.log("USERRSSS", users);
+  console.log("current user====>>", auth.currentUser?.displayName);
   const getSenderName = (userId: string) => {
     const sender = users.find((user) => user.uid === userId);
     return sender ? sender.name : "";
   };
 
+
   return (
     <div className="home_container">
       <div>
+      <div className="group_creation">
+            <button onClick={handleCreateGroup} className={`create-button ${isCreatingGroup ? "hidden" : "visible"}`}>
+              Create Group
+            </button>
+            {isCreatingGroup && (
+              <div className="group_form">
+                <input
+                  type="text"
+                  placeholder="Group Name"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                />
+                {/* <p>Selected Members:</p>
+                <ul>
+                  {selectedMembers.map((member) => (
+                    <li key={member}> </li>
+                  ))}
+                </ul> */}
+                <div className="create-cancel">
+                  <button onClick={handleCreateGroupSubmit}>Create +</button>
+                  <button onClick={cancelCreateGroup} style={{ cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         <p className="primary-text">Available Users:</p>
         {users.map((user) => (
           <User
@@ -298,7 +333,7 @@ const Home: React.FC<HomeProps> = () => {
               group={group}
               onSelectGroup={selectGrp}
               user1={user1}
-              handleAddMembersToGroup={handleAddMembersToGroup}
+              handleAddMembersToGroup={showAvailableUsers}
             />
           ))}
           <div>
@@ -318,35 +353,7 @@ const Home: React.FC<HomeProps> = () => {
                 </button>
               </div>
             )}
-          </div>
-
-          <div className="group_creation">
-            <button onClick={handleCreateGroup} className="create-button">
-              Create Group
-            </button>
-            {isCreatingGroup && (
-              <div className="group_form">
-                <input
-                  type="text"
-                  placeholder="Group Name"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                />
-                {/* <p>Selected Members:</p>
-                <ul>
-                  {selectedMembers.map((member) => (
-                    <li key={member}> </li>
-                  ))}
-                </ul> */}
-                <div>
-                  <button onClick={handleCreateGroupSubmit}>Create +</button>
-                  <p onClick={cancelCreateGroup} style={{ cursor: "pointer" }}>
-                    Cancel
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          </div>          
         </div>
       </div>
       <div className="messages_container">
@@ -358,7 +365,7 @@ const Home: React.FC<HomeProps> = () => {
             <div className="messages">
               {msgs.length
                 ? msgs.map((msg, i) => (
-                    <Message key={i} msg={msg} user1={user1} />
+                    <Message key={i} msg={msg} user1={user1} getSenderName={getSenderName} />
                   ))
                 : null}
             </div>
@@ -374,6 +381,7 @@ const Home: React.FC<HomeProps> = () => {
               <h3 className="no_conv">{selectedGroup.name}</h3>
             </div>
             <div className="messages">
+              <p style={{textAlign:'center'}}>{auth.currentUser?.displayName} created the group</p>
               {msgs.length
                 ? msgs.map((msg, i) => (
                     <Message

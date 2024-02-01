@@ -199,7 +199,7 @@ input{
   cursor: pointer;
   height: 30px;
   border-radius: 25px;
-  width: 85%;
+  width: 95%;
   padding-left: 10px;
 }
 .customButton {
@@ -533,3 +533,28 @@ input{
   .available-users button:hover{
     color: greenyellow;
   }
+
+  .create-cancel{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+    justify-content: space-around;
+  }
+
+  .create-cancel button{
+    color: black;
+    border: 1px solid;
+    border-radius: 25px;
+    padding: 5px;
+    background: wheat;
+    width: 90px;
+  }
+  .group_form{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 15px 0px;
+  }
+  

@@ -18,11 +18,10 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('Received background message ', payload);
 
-  // Customize the notification here
-  const notificationTitle = 'Background Message Title';
+  const notificationTitle = 'Name of the last message sender';
   const notificationOptions = {
-    body: 'Background Message body.',
-    icon: '/path/to/icon.png',
+    body: 'The last message.',
+    // icon: '/path/to/icon.png',
   };
 
   return self.registration.showNotification(notificationTitle, notificationOptions);
