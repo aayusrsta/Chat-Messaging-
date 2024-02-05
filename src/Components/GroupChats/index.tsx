@@ -5,6 +5,7 @@ interface GroupChat {
   name: string;
   members: string[];
   user1: string;
+  createdBy:string;
 }
 
 interface GroupProps {
@@ -13,10 +14,11 @@ interface GroupProps {
     name: string;
     members: string[];
     user1: string; 
+    createdBy:string;
   };
   onSelectGroup: (group: GroupChat) => void;
   user1: string;
-  handleAddMembersToGroup: (group: GroupChat) => void; // Add this line
+  handleAddMembersToGroup: (group: GroupChat) => void;
 
 }
 

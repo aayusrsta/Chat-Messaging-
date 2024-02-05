@@ -29,9 +29,12 @@ const NavBar: React.FC = () => {
     <nav className="nav-bar">
       <h1>Aayu's Messenger</h1>
       {user ? (
+        <>
+        <p>Welcome {auth.currentUser?.displayName}</p>
         <button onClick={signOut} className="sign-out" type="button">
           Log Out
         </button>
+        </>
       ) : (
         <p onClick={navigateRegister} style={{cursor:'pointer'}}>Register</p>
       )}

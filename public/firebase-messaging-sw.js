@@ -18,11 +18,13 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('Received background message ', payload);
 
-  const notificationTitle = 'Name of the last message sender';
+  const notificationTitle = payload.notification.title;
   const notificationOptions = {
-    body: 'The last message.',
-    // icon: '/path/to/icon.png',
+    body: payload.notification.body,
   };
+
+
+ 
 
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });

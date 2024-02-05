@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import React, { useEffect, useState, FormEvent } from "react";
 import { db, auth } from "../../firebase";
 import {
   collection,
@@ -17,6 +17,8 @@ import Message from "../../Components/Messages";
 import MessageForm from "@/Components/MessageForm";
 import User from "@/Components/User";
 import Group from "@/Components/GroupChats";
+import { getMessaging, getToken, onMessage } from "@firebase/messaging";
+import { onBackgroundMessage } from "@firebase/messaging/sw";
 interface HomeProps {}
 
 interface UserData {
@@ -31,7 +33,7 @@ interface MessageData {
   to: string;
   createdAt: Timestamp;
   media: string;
-  createdBy:string;
+  createdBy: string;
 }
 
 interface GroupChat {
@@ -39,8 +41,8 @@ interface GroupChat {
   name: string;
   members: string[];
   user1: string;
+  createdBy: string;
 }
-
 
 const Home: React.FC<HomeProps> = () => {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -55,6 +57,46 @@ const Home: React.FC<HomeProps> = () => {
   const [availableUsers, setAvailableUsers] = useState<UserData[]>([]);
   const [addingMembersToGroup, setAddingMembersToGroup] =
     useState<boolean>(false);
+  useEffect(() => {
+    console.log("INSIDE THE USEEFFECT HOOK");
+    const messaging = getMessaging();
+
+    const handleIncomingMessage = async (payload: any) => {
+      console.log("Received message=====>>>>:", payload);
+
+      const senderName = payload.data.senderName;
+      const receiverToken = await getToken(messaging);
+      console.log("Receiver FCM Token:", receiverToken);
+
+      await fetch("https://fcm.googleapis.com/fcm/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
+        },
+        body: JSON.stringify({
+          to: receiverToken,
+          notification: {
+            title: senderName,
+            body: payload.data.message,
+          },
+          data: {
+            chatId: payload.data.chatId,
+            message: payload.data.message,
+            senderName,
+          },
+        }),
+      });
+    };
+
+    // const unsubscribe = onMessage(messaging, (payload) => {
+    //   console.log('Message received outside handleIncomingMessage:', payload);
+    // });
+    const unsubscribe = onMessage(messaging, handleIncomingMessage);
+
+    return () => unsubscribe();
+  }, []);
 
   const showAvailableUsers = (group: GroupChat) => {
     const usersNotInGroup = users.filter(
@@ -76,7 +118,7 @@ const Home: React.FC<HomeProps> = () => {
   };
 
   const user1 = auth.currentUser?.uid || "";
-  console.log("USER IDD", user1);
+  // console.log("USER IDD", user1);
 
   useEffect(() => {
     const groupsRef = collection(db, "groups");
@@ -118,48 +160,48 @@ const Home: React.FC<HomeProps> = () => {
       prevMembers.filter((member) => member !== userId)
     );
   };
-  
+
   const handleCreateGroupSubmit = async (e: FormEvent) => {
     e.preventDefault();
-  
+
     if (selectedMembers.length < 2) {
       alert("Please select at least two users to create a group.");
       return;
     }
-  
+
     if (!groupName.trim()) {
       alert("Please enter a group name.");
       return;
     }
-  
+    const createdBy = auth.currentUser?.displayName || "";
+
     const groupData = {
       name: groupName,
       members: [...selectedMembers, user1],
+      createdBy,
     };
-  
+
     const groupRef = await addDoc(collection(db, "groups"), groupData);
-  
+
     const groupId = groupRef.id;
     const updatedGroupData = {
       ...groupData,
       id: groupId,
     };
-  
-    // Update the group document with the correct id
+
     await setDoc(doc(db, "groups", groupId), updatedGroupData);
-  
+
     const groupMsgsRef = collection(db, "group_messages", groupId, "chat");
     await addDoc(groupMsgsRef, {
       from: user1,
       createdAt: Timestamp.fromDate(new Date()),
-      createdBy:`${auth.currentUser?.displayName} created the group`
+      createdBy: `${auth.currentUser?.displayName} created the group`,
     });
-  
+
     setGroupName("");
     setSelectedMembers([]);
     setIsCreatingGroup(false);
   };
-  
 
   const selectGrp = async (group: GroupChat) => {
     setSelectedGroup(group);
@@ -215,7 +257,9 @@ const Home: React.FC<HomeProps> = () => {
 
   const handleGroupChatSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
+    if (!text.trim()) {
+      return;
+    }
     if (!selectedGroup) {
       return;
     }
@@ -244,7 +288,9 @@ const Home: React.FC<HomeProps> = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
+    if (!text.trim()) {
+      return;
+    }
     if (!chat) {
       return;
     }
@@ -269,48 +315,116 @@ const Home: React.FC<HomeProps> = () => {
       createdAt: Timestamp.fromDate(new Date()),
       media: url || "",
       unread: true,
+      senderName: auth.currentUser?.displayName || "",
     });
 
     setText("");
   };
 
-  console.log("current user====>>", auth.currentUser?.displayName);
+  // const handleSubmit = async (e: FormEvent) => {
+  //   e.preventDefault();
+  //   if (!text.trim()) {
+  //     return;
+  //   }
+  //   if (!chat) {
+  //     return;
+  //   }
+
+  //   const user2 = chat.uid;
+  //   const id = user1 > user2 ? `${user1 + user2}` : `${user2 + user1}`;
+
+  //   let url = "";
+
+  //   const senderName = auth.currentUser?.displayName || "";
+  //   const message = text;
+
+  //   await addDoc(collection(db, "messages", id, "chat"), {
+  //     text,
+  //     from: user1,
+  //     to: user2,
+  //     createdAt: Timestamp.fromDate(new Date()),
+  //     media: url || "",
+  //   });
+
+  //   // Update the payload for FCM notification
+  //   const messaging=getMessaging();
+  //   const receiverToken=getToken(messaging);
+  //   console.log("THE RECEIVER TOKEN", receiverToken)
+  //   const payload = {
+  //     to: receiverToken,
+  //     notification: {
+  //       title: senderName,
+  //       body: message,
+  //     },
+  //     data: {
+  //       chatId: id,
+  //       message,
+  //       senderName,
+  //     },
+  //   };
+
+  //   // Send the FCM notification
+  //   await fetch("https://fcm.googleapis.com/fcm/send", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //       Authorization:
+  //         "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD", // Replace with your server key
+  //     },
+  //     body: JSON.stringify(payload),
+  //   });
+
+  //   await setDoc(doc(db, "lastMsg", id), {
+  //     text,
+  //     from: user1,
+  //     to: user2,
+  //     createdAt: Timestamp.fromDate(new Date()),
+  //     media: url || "",
+  //     unread: true,
+  //     senderName,
+  //   });
+
+  //   setText("");
+  // };
+
+  // console.log("current user====>>", auth.currentUser?.displayName);
   const getSenderName = (userId: string) => {
     const sender = users.find((user) => user.uid === userId);
     return sender ? sender.name : "";
   };
 
-
   return (
     <div className="home_container">
       <div>
-      <div className="group_creation">
-            <button onClick={handleCreateGroup} className={`create-button ${isCreatingGroup ? "hidden" : "visible"}`}>
-              Create Group
-            </button>
-            {isCreatingGroup && (
-              <div className="group_form">
-                <input
-                  type="text"
-                  placeholder="Group Name"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                />
-                {/* <p>Selected Members:</p>
-                <ul>
-                  {selectedMembers.map((member) => (
-                    <li key={member}> </li>
-                  ))}
-                </ul> */}
-                <div className="create-cancel">
-                  <button onClick={handleCreateGroupSubmit}>Create +</button>
-                  <button onClick={cancelCreateGroup} style={{ cursor: "pointer" }}>
-                    Cancel
-                  </button>
-                </div>
+        <div className="group_creation">
+          <button
+            onClick={handleCreateGroup}
+            className={`create-button ${
+              isCreatingGroup ? "hidden" : "visible"
+            }`}
+          >
+            Create Group
+          </button>
+          {isCreatingGroup && (
+            <div className="group_form">
+              <input
+                type="text"
+                placeholder="Group Name"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+              <div className="create-cancel">
+                <button onClick={handleCreateGroupSubmit}>Create +</button>
+                <button
+                  onClick={cancelCreateGroup}
+                  style={{ cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
         <p className="primary-text">Available Users:</p>
         {users.map((user) => (
           <User
@@ -328,7 +442,7 @@ const Home: React.FC<HomeProps> = () => {
         <div className="groups_container">
           <p className="primary-text">Groups:</p>
           {groupChats.map((group) => (
-            <Group
+            <Group 
               key={group.id}
               group={group}
               onSelectGroup={selectGrp}
@@ -353,7 +467,7 @@ const Home: React.FC<HomeProps> = () => {
                 </button>
               </div>
             )}
-          </div>          
+          </div>
         </div>
       </div>
       <div className="messages_container">
@@ -365,7 +479,12 @@ const Home: React.FC<HomeProps> = () => {
             <div className="messages">
               {msgs.length
                 ? msgs.map((msg, i) => (
-                    <Message key={i} msg={msg} user1={user1} getSenderName={getSenderName} />
+                    <Message
+                      key={i}
+                      msg={msg}
+                      user1={user1}
+                      getSenderName={getSenderName}
+                    />
                   ))
                 : null}
             </div>
@@ -381,7 +500,9 @@ const Home: React.FC<HomeProps> = () => {
               <h3 className="no_conv">{selectedGroup.name}</h3>
             </div>
             <div className="messages">
-              <p style={{textAlign:'center'}}>{auth.currentUser?.displayName} created the group</p>
+              <p style={{ textAlign: "center" }}>
+                {selectedGroup.createdBy} created the group
+              </p>
               {msgs.length
                 ? msgs.map((msg, i) => (
                     <Message
