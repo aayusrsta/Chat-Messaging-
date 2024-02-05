@@ -1,6 +1,6 @@
 import React from "react";
 import GoogleSignin from "../img/btn_google_signin_dark_pressed_web.png";
-import { auth } from "../../firebase";
+import { auth, db } from "../../firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter } from "next/router";
 import {
@@ -8,6 +8,7 @@ import {
   signInWithRedirect,
   signOut as firebaseSignOut,
 } from "firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
 
 const NavBar: React.FC = () => {
   const [user] = useAuthState(auth);
@@ -17,8 +18,13 @@ const NavBar: React.FC = () => {
     signInWithRedirect(auth, provider);
   };
 
-  const signOut = () => {
-    firebaseSignOut(auth);
+  const signOut =async () => {
+    if(auth.currentUser){
+    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+      isOnline: false,
+    });
+  }
+    await firebaseSignOut(auth);
   };
   const router =useRouter();
   const navigateRegister=()=>{

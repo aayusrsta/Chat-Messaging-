@@ -395,7 +395,7 @@ const Home: React.FC<HomeProps> = () => {
 
   return (
     <div className="home_container">
-      <div>
+      <div className="side-nav">
         <div className="group_creation">
           <button
             onClick={handleCreateGroup}

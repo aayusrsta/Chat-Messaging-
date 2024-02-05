@@ -18,9 +18,13 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('Received background message ', payload);
 
-  const notificationTitle = payload.notification.title;
+  // const notificationTitle = payload.notification.title;
+  const notificationTitle = "RANDOM TITLE FOR TESTING";
+
   const notificationOptions = {
-    body: payload.notification.body,
+    // body: payload.notification.body,
+    body: "TEST BODY",
+
   };
 
 

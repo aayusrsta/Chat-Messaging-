@@ -202,6 +202,19 @@ input{
   width: 95%;
   padding-left: 10px;
 }
+.user_status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: absolute;
+    left: 250px;
+}
+.online {
+  background: #34eb52;
+}
+.offline {
+  background: var(--color-5);
+}
 .customButton {
     background-color: darkcyan;
     color: white;

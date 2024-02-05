@@ -61,6 +61,9 @@ const User: React.FC<UserProps> = ({
             >
               <h4>{user.name}</h4>
             </div>
+            <div
+            className={`user_status ${user.isOnline ? "online" : "offline"}`}
+          ></div>
             {isSelectable !== undefined &&
               isSelected !== undefined &&
               onAddMember &&
