@@ -1,56 +1,91 @@
-import GoogleSignin from "../img/btn_google_signin_dark_pressed_web.png";
-// import { auth } from "../../firebase";
-// import { useRouter } from 'next/router';
-
-// import {} from "firebase/auth";
+// import React, { useState, ChangeEvent, FormEvent } from "react";
+// import {
+//   signInWithEmailAndPassword,
+//   GoogleAuthProvider,
+//   signInWithRedirect,
+// } from "firebase/auth";
+// import { auth, db } from "../../firebase";
+// import { updateDoc, doc } from "firebase/firestore";
+// import { useRouter } from "next/router";
 // import Image from "next/image";
-// const Welcome: React.FC = () => {
+// interface LoginProps {}
+
+// interface UserData {
+//   email: string;
+//   password: string;
+//   error: string | null;
+//   loading: boolean;
+// }
+
+// const Welcome: React.FC<LoginProps> = () => {
+//   const [data, setData] = useState<UserData>({
+//     email: "",
+//     password: "",
+//     error: null,
+//     loading: false,
+//   });
 
 //   const router = useRouter();
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
 
-//   const signIn = async (e: React.FormEvent) => {
+//   const { email, password, error, loading } = data;
+//   const googleSignIn = () => {
+//     const provider = new GoogleAuthProvider();
+//     signInWithRedirect(auth, provider);
+//   };
+//   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+//     setData({ ...data, [e.target.name]: e.target.value });
+//   };
+
+//   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 //     e.preventDefault();
+//     setData({ ...data, error: null, loading: true });
+//     if (!email || !password) {
+//       setData({ ...data, error: "All fields are required" });
+//     }
 //     try {
-//       await signInWithEmailAndPassword(auth, email, password);
-//       router.push('/user-list');
+//       const result = await signInWithEmailAndPassword(auth, email, password);
 
-//     } catch (error: any) {
-//       console.error("Error signing in with email/password", error.message);
+//       await updateDoc(doc(db, "users", result.user.uid), {
+//         isOnline: true,
+//       });
+//       setData({
+//         email: "",
+//         password: "",
+//         error: null,
+//         loading: false,
+//       });
+//       router.replace("/");
+//     } catch (err: any) {
+//       setData({ ...data, error: err.message, loading: false });
 //     }
 //   };
 
 //   return (
-//     <main className="welcome">
-//       <h2>Chatbox by Aayu</h2>
-//       <Image
-//         src="/images/chat-app.png"
-//         alt="ReactJs logo"
-//         width={50}
-//         height={50}
-//         onClick={googleSignIn}
-//       />{" "}
-//       <p>Login to chat with with your friends.</p>
-//       <form onSubmit={signIn}>
-//         <div className="loginCard">
+//     <div className="welcome">
+//       <h3>Log into your Account</h3>
+//       <form className="loginCard" onSubmit={handleSubmit}>
+//         <div className="input_container">
 //           <input
-//             type="email"
-//             placeholder="Enter your email"
+//             type="text"
+//             name="email"
 //             value={email}
-//             onChange={(e) => setEmail(e.target.value)}
+//             placeholder="Email"
+//             onChange={handleChange}
 //           />
-//           <br />
-//           <br />
+//         </div>
+//         <div className="input_container">
 //           <input
 //             type="password"
-//             placeholder="Enter your password"
+//             name="password"
 //             value={password}
-//             onChange={(e) => setPassword(e.target.value)}
+//             placeholder="Password"
+//             onChange={handleChange}
 //           />
-//           <br />
-//           <button type="submit" className="customButton">
-//             Log In
+//         </div>
+//         {error ? <p className="error">{error}</p> : null}
+//         <div className="btn_container">
+//           <button className="customButton" disabled={loading}>
+//             {loading ? "Logging in ..." : "Login"}
 //           </button>
 //         </div>
 //       </form>
@@ -64,7 +99,7 @@ import GoogleSignin from "../img/btn_google_signin_dark_pressed_web.png";
 //           onClick={googleSignIn}
 //         />
 //       </button>
-//     </main>
+//     </div>
 //   );
 // };
 
@@ -72,6 +107,8 @@ import GoogleSignin from "../img/btn_google_signin_dark_pressed_web.png";
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import {
+  getAuth,
+  signInWithCustomToken,
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithRedirect,
@@ -80,6 +117,7 @@ import { auth, db } from "../../firebase";
 import { updateDoc, doc } from "firebase/firestore";
 import { useRouter } from "next/router";
 import Image from "next/image";
+
 interface LoginProps {}
 
 interface UserData {
@@ -100,26 +138,44 @@ const Welcome: React.FC<LoginProps> = () => {
   const router = useRouter();
 
   const { email, password, error, loading } = data;
-  const googleSignIn = () => {
-    const provider = new GoogleAuthProvider();
-    signInWithRedirect(auth, provider);
-  };
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setData({ ...data, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setData({ ...data, error: null, loading: true });
-    if (!email || !password) {
-      setData({ ...data, error: "All fields are required" });
+  const handleCustomTokenSignIn = async (token: string | undefined) => {
+    if (!token) {
+      console.error("Custom token is undefined");
+      setData({ ...data, error: "Custom token is undefined", loading: false });
+      return;
     }
+
+    const auth = getAuth();
+
+    try {
+      console.log("Received custom token:", token);
+
+      const userCredential = await signInWithCustomToken(auth, token);
+
+      const user = userCredential.user;
+      router.replace("/");
+    } catch (error) {
+      console.error("Error signing in with custom token:", error);
+      setData({
+        ...data,
+        error: "Error signing in with custom token",
+        loading: false,
+      });
+    }
+  };
+
+  const handleEmailPasswordSignIn = async () => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
 
-      await updateDoc(doc(db, "users", result.user.uid), {
-        isOnline: true,
-      });
+      // await updateDoc(doc(db, "users", result.user.uid), {
+      //   isOnline: true,
+      // });
       setData({
         email: "",
         password: "",
@@ -129,6 +185,44 @@ const Welcome: React.FC<LoginProps> = () => {
       router.replace("/");
     } catch (err: any) {
       setData({ ...data, error: err.message, loading: false });
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setData({ ...data, error: null, loading: true });
+
+    if (!email || !password) {
+      setData({ ...data, error: "All fields are required" });
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3001/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username: email, password }),
+      });
+
+      if (!response.ok) {
+        await handleEmailPasswordSignIn();
+        return;
+      }
+
+      const { token, customToken } = await response.json();
+
+      console.log("Received custom token from server:", customToken);
+      if (response.ok) {
+        await handleCustomTokenSignIn(customToken);
+      }
+    } catch (err: any) {
+      setData({
+        ...data,
+        error: err.message || "Error signing in",
+        loading: false,
+      });
     }
   };
 
@@ -162,15 +256,15 @@ const Welcome: React.FC<LoginProps> = () => {
         </div>
       </form>
       <p>OR</p>
-      <button className="sign-in">
+      {/* <button className="sign-in">
         <Image
           src="/images/google-signin.png"
-          alt="ReactJs logo"
+          alt="Google Sign-In"
           width={100}
           height={50}
           onClick={googleSignIn}
         />
-      </button>
+      </button> */}
     </div>
   );
 };

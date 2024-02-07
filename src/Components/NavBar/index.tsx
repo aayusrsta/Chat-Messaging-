@@ -7,6 +7,7 @@ import {
   GoogleAuthProvider,
   signInWithRedirect,
   signOut as firebaseSignOut,
+  signOut,
 } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 
@@ -18,13 +19,21 @@ const NavBar: React.FC = () => {
     signInWithRedirect(auth, provider);
   };
 
-  const signOut =async () => {
-    if(auth.currentUser){
+  const logOut =async () => {
+    signOut(auth).then(() => {
+      // Sign-out successful.
+    }).catch((error) => {
+      // An error happened.
+    }); 
+    if(auth.currentUser && auth.currentUser.uid){
     await updateDoc(doc(db, "users", auth.currentUser.uid), {
       isOnline: false,
     });
-  }
     await firebaseSignOut(auth);
+
+      }
+         
+
   };
   const router =useRouter();
   const navigateRegister=()=>{
@@ -37,7 +46,7 @@ const NavBar: React.FC = () => {
       {user ? (
         <>
         <p>Welcome {auth.currentUser?.displayName}</p>
-        <button onClick={signOut} className="sign-out" type="button">
+        <button onClick={logOut} className="sign-out" type="button">
           Log Out
         </button>
         </>

@@ -71,3 +71,56 @@ function App({ Component, pageProps }: AppProps) {
 }
 
 export default App;
+// import { useState } from 'react';
+
+// export default function Home() {
+//   const [username, setUsername] = useState('');
+//   const [password, setPassword] = useState('');
+
+//   const handleLogin = async (e:any) => {
+//     e.preventDefault();
+
+//     // Send a POST request to the authentication server
+//     const response = await fetch('http://localhost:3001/api/login', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({ username, password }),
+//     });
+
+//     const data = await response.json();
+
+//     // Handle the response, e.g., store the token in localStorage
+//     console.log(data);
+//   };
+
+//   return (
+//     <div>
+//       <h1>Login</h1>
+//       <form onSubmit={handleLogin}>
+//         <label htmlFor="username">Username:</label>
+//         <input
+//           type="text"
+//           id="username"
+//           name="username"
+//           value={username}
+//           onChange={(e) => setUsername(e.target.value)}
+//           required
+//         />
+//         <br />
+//         <label htmlFor="password">Password:</label>
+//         <input
+//           type="password"
+//           id="password"
+//           name="password"
+//           value={password}
+//           onChange={(e) => setPassword(e.target.value)}
+//           required
+//         />
+//         <br />
+//         <button type="submit">Login</button>
+//       </form>
+//     </div>
+//   );
+// }

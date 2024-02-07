@@ -17,8 +17,6 @@ import Message from "../../Components/Messages";
 import MessageForm from "@/Components/MessageForm";
 import User from "@/Components/User";
 import Group from "@/Components/GroupChats";
-import { getMessaging, getToken, onMessage } from "@firebase/messaging";
-import { onBackgroundMessage } from "@firebase/messaging/sw";
 interface HomeProps {}
 
 interface UserData {
@@ -57,46 +55,42 @@ const Home: React.FC<HomeProps> = () => {
   const [availableUsers, setAvailableUsers] = useState<UserData[]>([]);
   const [addingMembersToGroup, setAddingMembersToGroup] =
     useState<boolean>(false);
-  useEffect(() => {
-    console.log("INSIDE THE USEEFFECT HOOK");
-    const messaging = getMessaging();
+    
+  // useEffect(() => {
+  //   console.log("INSIDE THE USEEFFECT HOOK");
+  //   const messaging = getMessaging();
 
-    const handleIncomingMessage = async (payload: any) => {
-      console.log("Received message=====>>>>:", payload);
+  //   const handleIncomingMessage = async (payload: any) => {
+  //     console.log("Received message=====>>>>:", payload);
 
-      const senderName = payload.data.senderName;
-      const receiverToken = await getToken(messaging);
-      console.log("Receiver FCM Token:", receiverToken);
+  //     // const senderName = payload.data.imageUrl;
+  //     const receiverToken = await getToken(messaging);
+  //     console.log("Receiver FCM Token:", receiverToken);
 
-      await fetch("https://fcm.googleapis.com/fcm/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:
-            "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
-        },
-        body: JSON.stringify({
-          to: receiverToken,
-          notification: {
-            title: senderName,
-            body: payload.data.message,
-          },
-          data: {
-            chatId: payload.data.chatId,
-            message: payload.data.message,
-            senderName,
-          },
-        }),
-      });
-    };
+  //     await fetch("https://fcm.googleapis.com/fcm/send", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization:
+  //           "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
+  //       },
+  //       body: JSON.stringify({
+  //         to: receiverToken,
+  //         notification: {
+  //           title: payload.notification.title,
+  //           body: payload.notification.body,
+  //         },
+  //         data: {
+  //           action: payload.data.action,
+  //           imageUrl: payload.data.imageUrl,
+  //         },
+  //       }),
+  //     });
+  //   }; 
+  //   const unsubscribe = onMessage(messaging, handleIncomingMessage);
 
-    // const unsubscribe = onMessage(messaging, (payload) => {
-    //   console.log('Message received outside handleIncomingMessage:', payload);
-    // });
-    const unsubscribe = onMessage(messaging, handleIncomingMessage);
-
-    return () => unsubscribe();
-  }, []);
+  //   return () => unsubscribe();
+  // }, []);
 
   const showAvailableUsers = (group: GroupChat) => {
     const usersNotInGroup = users.filter(
@@ -106,6 +100,31 @@ const Home: React.FC<HomeProps> = () => {
     setAddingMembersToGroup(true);
     setSelectedGroup(group);
   };
+
+
+  useEffect(() => {
+
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/api/users");
+        const userData = await response.json();
+        console.log("Received user data:", userData);
+    
+        if (Array.isArray(userData)) {
+          setUsers(userData);
+        } else {
+          console.error("Invalid user data format:", userData);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+    
+    fetchUsers();
+  }, []);
+  console.log(users, "THE USERS")
+
+
 
   const handleAddMemberToGroup = async (userId: string) => {
     if (selectedGroup) {
@@ -118,7 +137,7 @@ const Home: React.FC<HomeProps> = () => {
   };
 
   const user1 = auth.currentUser?.uid || "";
-  // console.log("USER IDD", user1);
+  console.log("USER IDD", auth.currentUser);
 
   useEffect(() => {
     const groupsRef = collection(db, "groups");
@@ -140,7 +159,7 @@ const Home: React.FC<HomeProps> = () => {
       querySnapshot.forEach((doc) => {
         users.push(doc.data() as UserData);
       });
-      setUsers(users);
+      setUsers((prevUsers) => [...prevUsers, ...users]);
     });
     return () => unsub();
   }, [user1]);
@@ -320,6 +339,8 @@ const Home: React.FC<HomeProps> = () => {
 
     setText("");
   };
+
+  console.log("THE CURRENT USER DETAILS:", auth.currentUser)
 
   // const handleSubmit = async (e: FormEvent) => {
   //   e.preventDefault();
