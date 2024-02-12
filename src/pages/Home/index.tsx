@@ -17,12 +17,14 @@ import Message from "../../Components/Messages";
 import MessageForm from "@/Components/MessageForm";
 import User from "@/Components/User";
 import Group from "@/Components/GroupChats";
+import { getMessaging, getToken, onMessage } from "@firebase/messaging";
+import useFcmToken from "@/utils/hooks/useFcmToken";
 interface HomeProps {}
 
 interface UserData {
-  uid: string;
-  name: string;
-  isOnline: boolean;
+  id: string;
+  username: string;
+  first_name: string;
 }
 
 interface MessageData {
@@ -55,80 +57,81 @@ const Home: React.FC<HomeProps> = () => {
   const [availableUsers, setAvailableUsers] = useState<UserData[]>([]);
   const [addingMembersToGroup, setAddingMembersToGroup] =
     useState<boolean>(false);
-    
-  // useEffect(() => {
-  //   console.log("INSIDE THE USEEFFECT HOOK");
-  //   const messaging = getMessaging();
 
-  //   const handleIncomingMessage = async (payload: any) => {
-  //     console.log("Received message=====>>>>:", payload);
+  const saveFCMTokenForUser = async (userId: string, fcmToken: string) => {
+    const userRef = doc(db, "users", userId);
 
-  //     // const senderName = payload.data.imageUrl;
-  //     const receiverToken = await getToken(messaging);
-  //     console.log("Receiver FCM Token:", receiverToken);
+    const userDoc = await getDoc(userRef);
 
-  //     await fetch("https://fcm.googleapis.com/fcm/send", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization:
-  //           "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
-  //       },
-  //       body: JSON.stringify({
-  //         to: receiverToken,
-  //         notification: {
-  //           title: payload.notification.title,
-  //           body: payload.notification.body,
-  //         },
-  //         data: {
-  //           action: payload.data.action,
-  //           imageUrl: payload.data.imageUrl,
-  //         },
-  //       }),
-  //     });
-  //   }; 
-  //   const unsubscribe = onMessage(messaging, handleIncomingMessage);
+    if (userDoc.exists()) {
+      await updateDoc(userRef, {
+        fcmToken: fcmToken,
+      });
+    } else {
+      await setDoc(userRef, {
+        fcmToken: fcmToken,
+      });
+    }
+  };
 
-  //   return () => unsubscribe();
-  // }, []);
+  const userId = auth.currentUser?.uid || "";
+  const receiverToken = useFcmToken()?.fcmToken || "";
+
+  saveFCMTokenForUser(userId, receiverToken);
 
   const showAvailableUsers = (group: GroupChat) => {
     const usersNotInGroup = users.filter(
-      (user) => !group.members.includes(user.uid)
+      (user) => !group.members.includes(user.id.toString())
     );
     setAvailableUsers(usersNotInGroup);
     setAddingMembersToGroup(true);
     setSelectedGroup(group);
   };
 
-
   useEffect(() => {
-
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/users");
+        const authToken = localStorage.getItem("authToken");
+
+        if (!authToken) {
+          console.error("User not logged in.");
+          return;
+        }
+
+        const headers = {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        };
+
+        const response = await fetch("http://localhost:8000/api/users/getAll", {
+          headers,
+        });
+
         const userData = await response.json();
-        console.log("Received user data:", userData);
-    
-        if (Array.isArray(userData)) {
-          setUsers(userData);
+        console.log("List of Users:", userData.data.users);
+
+        if (response.ok) {
+          const filteredUsers = userData.data.users.filter(
+            (user: UserData) => user.id.toString() !== user1
+          );
+
+          console.log("FILTERED USERS", filteredUsers, "USER!", user1);
+          setUsers(filteredUsers);
         } else {
-          console.error("Invalid user data format:", userData);
+          console.error("Error fetching users:", userData.message);
         }
       } catch (error) {
         console.error("Error fetching users:", error);
       }
     };
-    
+
     fetchUsers();
   }, []);
-  console.log(users, "THE USERS")
-
-
+  console.log(users, "THE USERS");
 
   const handleAddMemberToGroup = async (userId: string) => {
     if (selectedGroup) {
-      const updatedMembers = [...selectedGroup.members, userId];
+      const updatedMembers = [...selectedGroup.members, userId.toString()];
       await updateDoc(doc(db, "groups", selectedGroup.id), {
         members: updatedMembers,
       });
@@ -151,18 +154,18 @@ const Home: React.FC<HomeProps> = () => {
     return () => unsub();
   }, [user1]);
 
-  useEffect(() => {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("uid", "not-in", [user1]));
-    const unsub = onSnapshot(q, (querySnapshot) => {
-      let users: UserData[] = [];
-      querySnapshot.forEach((doc) => {
-        users.push(doc.data() as UserData);
-      });
-      setUsers((prevUsers) => [...prevUsers, ...users]);
-    });
-    return () => unsub();
-  }, [user1]);
+  // useEffect(() => {
+  //   const usersRef = collection(db, "users");
+  //   const q = query(usersRef, where("uid", "not-in", [user1]));
+  //   const unsub = onSnapshot(q, (querySnapshot) => {
+  //     let users: UserData[] = [];
+  //     querySnapshot.forEach((doc) => {
+  //       users.push(doc.data() as UserData);
+  //     });
+  //     setUsers((prevUsers) => [...prevUsers, ...users]);
+  //   });
+  //   return () => unsub();
+  // }, [user1]);
 
   const handleCreateGroup = () => {
     setIsCreatingGroup(true);
@@ -171,7 +174,7 @@ const Home: React.FC<HomeProps> = () => {
     setIsCreatingGroup(false);
   };
   const handleAddMember = (userId: string) => {
-    setSelectedMembers((prevMembers) => [...prevMembers, userId]);
+    setSelectedMembers((prevMembers) => [...prevMembers, userId.toString()]);
   };
 
   const handleRemoveMember = (userId: string) => {
@@ -183,7 +186,7 @@ const Home: React.FC<HomeProps> = () => {
   const handleCreateGroupSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (selectedMembers.length < 2) {
+    if (selectedMembers.length < 1) {
       alert("Please select at least two users to create a group.");
       return;
     }
@@ -252,7 +255,7 @@ const Home: React.FC<HomeProps> = () => {
     setSelectedGroup(null);
     setChat(user);
 
-    const user2 = user.uid;
+    const user2 = user.id.toString();
     console.log("SECOND USERRR", user2);
     const id = user1 > user2 ? `${user1 + user2}` : `${user2 + user1}`;
 
@@ -314,7 +317,7 @@ const Home: React.FC<HomeProps> = () => {
       return;
     }
 
-    const user2 = chat.uid;
+    const user2 = chat.id;
     const id = user1 > user2 ? `${user1 + user2}` : `${user2 + user1}`;
 
     let url = "";
@@ -336,82 +339,76 @@ const Home: React.FC<HomeProps> = () => {
       unread: true,
       senderName: auth.currentUser?.displayName || "",
     });
+    console.log("USER STRING PASSED IS ", user2);
+    const receiverToken = await getReceiverTokenForUser(user2);
+
+    const payload = {
+      to: receiverToken,
+      notification: {
+        title: auth.currentUser?.displayName || "New Message",
+        body: text,
+      },
+      data: {
+        chatId: id,
+        message: text,
+        senderName: auth.currentUser?.displayName || "",
+      },
+    };
+
+    try {
+      const response = await fetch("https://fcm.googleapis.com/fcm/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
+        },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        const responseBody = await response.json();
+        console.log("Response Body:", responseBody);
+      }
+      if (!response.ok) {
+        console.error("Error sending push notification:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error during fetch request:", error);
+    }
 
     setText("");
   };
+  const getReceiverTokenForUser = async (userId: string) => {
+    try {
+      const id = userId;
+      const userDoc = await getDoc(doc(db, "users", `${id}`));
 
-  console.log("THE CURRENT USER DETAILS:", auth.currentUser)
+      if (userDoc.exists() && userDoc.data()) {
+        const userData = userDoc.data();
 
-  // const handleSubmit = async (e: FormEvent) => {
-  //   e.preventDefault();
-  //   if (!text.trim()) {
-  //     return;
-  //   }
-  //   if (!chat) {
-  //     return;
-  //   }
+        if (typeof userData === "object" && "fcmToken" in userData) {
+          const receiverToken = userData.fcmToken || "";
+          console.log("THE RECEIVED TOKEN IS", receiverToken);
+          return receiverToken;
+        } else {
+          console.error(`Invalid data structure for user ${userId}`);
+          return "";
+        }
+      } else {
+        console.error(`User document does not exist for ${userId}`);
+        return "";
+      }
+    } catch (error) {
+      console.error(`Error fetching user document for ${userId}:`, error);
+      return "";
+    }
+  };
 
-  //   const user2 = chat.uid;
-  //   const id = user1 > user2 ? `${user1 + user2}` : `${user2 + user1}`;
+  console.log("THE CURRENT USER DETAILS:", auth.currentUser);
 
-  //   let url = "";
-
-  //   const senderName = auth.currentUser?.displayName || "";
-  //   const message = text;
-
-  //   await addDoc(collection(db, "messages", id, "chat"), {
-  //     text,
-  //     from: user1,
-  //     to: user2,
-  //     createdAt: Timestamp.fromDate(new Date()),
-  //     media: url || "",
-  //   });
-
-  //   // Update the payload for FCM notification
-  //   const messaging=getMessaging();
-  //   const receiverToken=getToken(messaging);
-  //   console.log("THE RECEIVER TOKEN", receiverToken)
-  //   const payload = {
-  //     to: receiverToken,
-  //     notification: {
-  //       title: senderName,
-  //       body: message,
-  //     },
-  //     data: {
-  //       chatId: id,
-  //       message,
-  //       senderName,
-  //     },
-  //   };
-
-  //   // Send the FCM notification
-  //   await fetch("https://fcm.googleapis.com/fcm/send", {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //       Authorization:
-  //         "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD", // Replace with your server key
-  //     },
-  //     body: JSON.stringify(payload),
-  //   });
-
-  //   await setDoc(doc(db, "lastMsg", id), {
-  //     text,
-  //     from: user1,
-  //     to: user2,
-  //     createdAt: Timestamp.fromDate(new Date()),
-  //     media: url || "",
-  //     unread: true,
-  //     senderName,
-  //   });
-
-  //   setText("");
-  // };
-
-  // console.log("current user====>>", auth.currentUser?.displayName);
   const getSenderName = (userId: string) => {
-    const sender = users.find((user) => user.uid === userId);
-    return sender ? sender.name : "";
+    const sender = users.find((user) => user.id === userId);
+    return sender ? sender.first_name : "";
   };
 
   return (
@@ -449,21 +446,21 @@ const Home: React.FC<HomeProps> = () => {
         <p className="primary-text">Available Users:</p>
         {users.map((user) => (
           <User
-            key={user.uid}
+            key={user.id}
             user={user}
             selectUser={selectUser}
             user1={user1}
             chat={chat}
             isSelectable={isCreatingGroup}
-            isSelected={selectedMembers.includes(user.uid)}
-            onAddMember={() => handleAddMember(user.uid)}
-            onRemoveMember={() => handleRemoveMember(user.uid)}
+            isSelected={selectedMembers.includes(user.id.toString())}
+            onAddMember={() => handleAddMember(user.id.toString())}
+            onRemoveMember={() => handleRemoveMember(user.id.toString())}
           />
         ))}
         <div className="groups_container">
           <p className="primary-text">Groups:</p>
           {groupChats.map((group) => (
-            <Group 
+            <Group
               key={group.id}
               group={group}
               onSelectGroup={selectGrp}
@@ -476,9 +473,11 @@ const Home: React.FC<HomeProps> = () => {
               <div className="add-members-section">
                 <h3>Select Users to Add to the Group</h3>
                 {availableUsers.map((user) => (
-                  <div key={user.uid} className="available-users">
-                    <span>{user.name}</span>
-                    <button onClick={() => handleAddMemberToGroup(user.uid)}>
+                  <div key={user.id} className="available-users">
+                    <span>{user.username}</span>
+                    <button
+                      onClick={() => handleAddMemberToGroup(user.id.toString())}
+                    >
                       Add +
                     </button>
                   </div>
@@ -495,7 +494,7 @@ const Home: React.FC<HomeProps> = () => {
         {chat ? (
           <>
             <div className="messages_user">
-              <h3 className="no_conv">{chat.name}</h3>
+              <h3 className="no_conv">{chat.username}</h3>
             </div>
             <div className="messages">
               {msgs.length

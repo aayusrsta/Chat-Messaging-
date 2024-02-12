@@ -20,15 +20,16 @@ const NavBar: React.FC = () => {
   };
 
   const logOut =async () => {
+    localStorage.removeItem('authToken');
     signOut(auth).then(() => {
       // Sign-out successful.
     }).catch((error) => {
       // An error happened.
     }); 
     if(auth.currentUser && auth.currentUser.uid){
-    await updateDoc(doc(db, "users", auth.currentUser.uid), {
-      isOnline: false,
-    });
+    // await updateDoc(doc(db, "users", auth.currentUser.uid), {
+    //   isOnline: false,
+    // });
     await firebaseSignOut(auth);
 
       }
@@ -46,6 +47,8 @@ const NavBar: React.FC = () => {
       {user ? (
         <>
         <p>Welcome {auth.currentUser?.displayName}</p>
+        <p onClick={navigateRegister} style={{cursor:'pointer'}}>Register</p>
+
         <button onClick={logOut} className="sign-out" type="button">
           Log Out
         </button>

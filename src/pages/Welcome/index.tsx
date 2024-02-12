@@ -1,111 +1,5 @@
-// import React, { useState, ChangeEvent, FormEvent } from "react";
-// import {
-//   signInWithEmailAndPassword,
-//   GoogleAuthProvider,
-//   signInWithRedirect,
-// } from "firebase/auth";
-// import { auth, db } from "../../firebase";
-// import { updateDoc, doc } from "firebase/firestore";
-// import { useRouter } from "next/router";
-// import Image from "next/image";
-// interface LoginProps {}
-
-// interface UserData {
-//   email: string;
-//   password: string;
-//   error: string | null;
-//   loading: boolean;
-// }
-
-// const Welcome: React.FC<LoginProps> = () => {
-//   const [data, setData] = useState<UserData>({
-//     email: "",
-//     password: "",
-//     error: null,
-//     loading: false,
-//   });
-
-//   const router = useRouter();
-
-//   const { email, password, error, loading } = data;
-//   const googleSignIn = () => {
-//     const provider = new GoogleAuthProvider();
-//     signInWithRedirect(auth, provider);
-//   };
-//   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-//     setData({ ...data, [e.target.name]: e.target.value });
-//   };
-
-//   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-//     e.preventDefault();
-//     setData({ ...data, error: null, loading: true });
-//     if (!email || !password) {
-//       setData({ ...data, error: "All fields are required" });
-//     }
-//     try {
-//       const result = await signInWithEmailAndPassword(auth, email, password);
-
-//       await updateDoc(doc(db, "users", result.user.uid), {
-//         isOnline: true,
-//       });
-//       setData({
-//         email: "",
-//         password: "",
-//         error: null,
-//         loading: false,
-//       });
-//       router.replace("/");
-//     } catch (err: any) {
-//       setData({ ...data, error: err.message, loading: false });
-//     }
-//   };
-
-//   return (
-//     <div className="welcome">
-//       <h3>Log into your Account</h3>
-//       <form className="loginCard" onSubmit={handleSubmit}>
-//         <div className="input_container">
-//           <input
-//             type="text"
-//             name="email"
-//             value={email}
-//             placeholder="Email"
-//             onChange={handleChange}
-//           />
-//         </div>
-//         <div className="input_container">
-//           <input
-//             type="password"
-//             name="password"
-//             value={password}
-//             placeholder="Password"
-//             onChange={handleChange}
-//           />
-//         </div>
-//         {error ? <p className="error">{error}</p> : null}
-//         <div className="btn_container">
-//           <button className="customButton" disabled={loading}>
-//             {loading ? "Logging in ..." : "Login"}
-//           </button>
-//         </div>
-//       </form>
-//       <p>OR</p>
-//       <button className="sign-in">
-//         <Image
-//           src="/images/google-signin.png"
-//           alt="ReactJs logo"
-//           width={100}
-//           height={50}
-//           onClick={googleSignIn}
-//         />
-//       </button>
-//     </div>
-//   );
-// };
-
-// export default Welcome;
-
 import React, { useState, ChangeEvent, FormEvent } from "react";
+
 import {
   getAuth,
   signInWithCustomToken,
@@ -114,13 +8,14 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { auth, db } from "../../firebase";
-import { updateDoc, doc } from "firebase/firestore";
+import { updateDoc, doc, addDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/router";
 import Image from "next/image";
+import useFcmToken from "@/utils/hooks/useFcmToken";
 
 interface LoginProps {}
 
-interface UserData {
+interface UserLogin {
   email: string;
   password: string;
   error: string | null;
@@ -128,7 +23,7 @@ interface UserData {
 }
 
 const Welcome: React.FC<LoginProps> = () => {
-  const [data, setData] = useState<UserData>({
+  const [data, setData] = useState<UserLogin>({
     email: "",
     password: "",
     error: null,
@@ -153,11 +48,14 @@ const Welcome: React.FC<LoginProps> = () => {
     const auth = getAuth();
 
     try {
-      console.log("Received custom token:", token);
+      console.log("Custom Token:", token);
 
       const userCredential = await signInWithCustomToken(auth, token);
 
       const user = userCredential.user;
+      const fcmToken = useFcmToken();
+      console.log("AYOOO THEuser is", user);
+
       router.replace("/");
     } catch (error) {
       console.error("Error signing in with custom token:", error);
@@ -173,9 +71,6 @@ const Welcome: React.FC<LoginProps> = () => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
 
-      // await updateDoc(doc(db, "users", result.user.uid), {
-      //   isOnline: true,
-      // });
       setData({
         email: "",
         password: "",
@@ -187,7 +82,6 @@ const Welcome: React.FC<LoginProps> = () => {
       setData({ ...data, error: err.message, loading: false });
     }
   };
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setData({ ...data, error: null, loading: true });
@@ -198,25 +92,50 @@ const Welcome: React.FC<LoginProps> = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:3001/api/login", {
-        method: "POST",
+      const loginResponse = await fetch(
+        "http://localhost:8000/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: email, password }),
+        }
+      );
+
+      const loginData = await loginResponse.json();
+      console.log(loginData);
+
+      if (!loginResponse.ok) {
+        throw new Error("Login failed");
+      }
+
+      const { access_token, refresh_token } = loginData;
+      console.log("Received access_token:", access_token);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("authToken", access_token);
+      }
+      const userResponse = await fetch("http://localhost:8000/api/auth/user", {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
         },
-        body: JSON.stringify({ username: email, password }),
       });
 
-      if (!response.ok) {
-        await handleEmailPasswordSignIn();
-        return;
+      if (!userResponse.ok) {
+        throw new Error("Failed to fetch user data");
       }
 
-      const { token, customToken } = await response.json();
+      const userData = await userResponse.json();
 
-      console.log("Received custom token from server:", customToken);
-      if (response.ok) {
-        await handleCustomTokenSignIn(customToken);
+      const customToken = userData?.customToken;
+
+      if (!customToken) {
+        throw new Error("User id not found in the response");
       }
+
+      await handleCustomTokenSignIn(customToken);
     } catch (err: any) {
       setData({
         ...data,
@@ -232,7 +151,7 @@ const Welcome: React.FC<LoginProps> = () => {
       <form className="loginCard" onSubmit={handleSubmit}>
         <div className="input_container">
           <input
-            type="text"
+            type="email"
             name="email"
             value={email}
             placeholder="Email"
@@ -255,7 +174,7 @@ const Welcome: React.FC<LoginProps> = () => {
           </button>
         </div>
       </form>
-      <p>OR</p>
+      {/* <p>OR</p> */}
       {/* <button className="sign-in">
         <Image
           src="/images/google-signin.png"

@@ -3,10 +3,9 @@ import { onSnapshot, doc, DocumentData } from "firebase/firestore";
 import { db } from "../../firebase";
 
 interface UserData {
-  uid: string;
-  name: string;
-  avatar?: string;
-  isOnline: boolean;
+  id: string;
+  username: string;
+  first_name:string;
 }
 
 interface LastMsgData {
@@ -19,7 +18,7 @@ interface UserProps {
   user: UserData;
   selectUser: (user: UserData) => void;
   chat: {
-    name: string;
+    username: string;
   } | null;
   isSelectable?: boolean;
   isSelected?: boolean;
@@ -36,7 +35,7 @@ const User: React.FC<UserProps> = ({
   onAddMember,
   onRemoveMember,
 }) => {
-  const user2 = user?.uid;
+  const user2 = user?.id;
   const [data, setData] = useState<LastMsgData | DocumentData | undefined>(
     undefined
   );
@@ -58,7 +57,7 @@ const User: React.FC<UserProps> = ({
               className="primary-text user_detail"
               style={{ cursor: "pointer" }}
             >
-              <h4>{user.name}</h4>
+              <h4>{user.username}  {user.id}</h4>
             </div>
             {/* <div
             className={`user_status ${user.isOnline ? "online" : "offline"}`}
