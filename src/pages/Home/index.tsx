@@ -213,6 +213,24 @@ const Home: React.FC<HomeProps> = () => {
 
     await setDoc(doc(db, "groups", groupId), updatedGroupData);
 
+
+    const topic = groupId;
+    for (const memberId of selectedMembers) {
+      const memberToken = await getReceiverTokenForUser(memberId);
+      if (memberToken) {
+        const subscribeResponse = await fetch("https://iid.googleapis.com/iid/v1/" + memberToken + "/rel/topics/" + topic, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "key=AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD", 
+          },
+        });
+        if (!subscribeResponse.ok) {
+          console.error("Error subscribing member to topic:", subscribeResponse.statusText);
+        }
+      }
+    }
+
     const groupMsgsRef = collection(db, "group_messages", groupId, "chat");
     await addDoc(groupMsgsRef, {
       from: user1,
@@ -287,7 +305,7 @@ const Home: React.FC<HomeProps> = () => {
     }
 
     const id = selectedGroup.id;
-
+    const group_name=selectedGroup.name;
     let url = "";
 
     await addDoc(collection(db, "group_messages", id, "chat"), {
@@ -304,6 +322,42 @@ const Home: React.FC<HomeProps> = () => {
       media: url || "",
       unread: true,
     });
+    if (selectedGroup) {
+      const topic = selectedGroup.id;
+      const payload = {
+        to: "/topics/" + topic,
+        notification: {
+          title:group_name,
+          body: `${auth.currentUser?.displayName}: ${text}`,
+        },
+        data: {
+          chatId: id,
+          message: text,
+          senderName: auth.currentUser?.displayName || "",
+        },
+      };
+  
+      try {
+        const response = await fetch("https://fcm.googleapis.com/fcm/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
+          },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          const responseBody = await response.json();
+          console.log("Response Body:", responseBody);
+        }
+        if (!response.ok) {
+          console.error("Error sending push notification:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error during fetch request:", error);
+      }
+    }
+
 
     setText("");
   };
