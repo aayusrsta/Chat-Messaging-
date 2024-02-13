@@ -16,6 +16,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "public/firebase-messaging-swfirebase-messaging-sw.js", "sendNotification.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "public/firebase-messaging-swfirebase-messaging-sw.js", "sendNotification.js", "declarations.d.ts"],
   "exclude": ["node_modules"]
 }

@@ -254,7 +254,7 @@ input{
     color:white;
   }
   .messages_container{
-    background-color: gray;
+    background-color: #171717;
   }
 
 
@@ -387,7 +387,7 @@ input{
   .home_container {
     position: relative;
     display: grid;
-    grid-template-columns: 1fr 3fr;
+    grid-template-columns: 0.6fr 3fr;
     overflow: hidden;
     height: calc(100vh - 70px);
     width: 100vw;
@@ -402,10 +402,25 @@ input{
     padding: 10px;
     cursor: pointer;
   }
-  .user_info {
+  .user_info,
+  .group_info {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 7px;
+    margin: 0px 15px;
+  }
+ 
+  .user_info.active,
+  .group_info.active  {
+    color: #88dded;
+    background: #262626;
+    border-radius: 0.5rem; 
+  }
+  
+  .user_detail.active,
+  .group_detail.active{
+    color:#88dded;
   }
   .user_detail {
     display: flex;

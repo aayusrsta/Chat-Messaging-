@@ -47,7 +47,7 @@ const NavBar: React.FC = () => {
       {user ? (
         <>
         <p>Welcome {auth.currentUser?.displayName}</p>
-        <p onClick={navigateRegister} style={{cursor:'pointer'}}>Register</p>
+        {/* <p onClick={navigateRegister} style={{cursor:'pointer'}}>Register</p> */}
 
         <button onClick={logOut} className="sign-out" type="button">
           Log Out

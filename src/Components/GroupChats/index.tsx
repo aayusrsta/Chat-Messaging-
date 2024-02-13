@@ -16,23 +16,24 @@ interface GroupProps {
     user1: string; 
     createdBy:string;
   };
+  isActive:boolean;
   onSelectGroup: (group: GroupChat) => void;
   user1: string;
   handleAddMembersToGroup: (group: GroupChat) => void;
 
 }
 
-const Group: React.FC<GroupProps> = ({ group, onSelectGroup, user1, handleAddMembersToGroup }) => {
+const Group: React.FC<GroupProps> = ({ group, onSelectGroup, user1, handleAddMembersToGroup, isActive }) => {
   const isMember = group.members.includes(user1);
 
   return (
     <div
-      className={`group_info ${isMember ? "visible" : "hidden"}`}
+      className={`group_info ${isMember ? "visible" : "hidden"} ${isActive ? "active" : ""}`}
       onClick={() => onSelectGroup(group)}
     >
-      <div className="group_info">
+      <div className="group_infos">
         <div
-          className="primary-text group_detail"
+          className={`primary-text group_detail ${isActive ? "active" : ""}`}
           style={{ cursor: "pointer" }}
         >
           <h4>

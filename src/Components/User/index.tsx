@@ -20,6 +20,8 @@ interface UserProps {
   chat: {
     username: string;
   } | null;
+  isActive?: boolean;
+
   isSelectable?: boolean;
   isSelected?: boolean;
   onAddMember?: () => void;
@@ -31,6 +33,7 @@ const User: React.FC<UserProps> = ({
   user,
   selectUser,
   isSelectable,
+  isActive,
   isSelected,
   onAddMember,
   onRemoveMember,
@@ -52,12 +55,12 @@ const User: React.FC<UserProps> = ({
     <>
       {user && (
         <div onClick={() => selectUser(user)}>
-          <div className="user_info">
+          <div className={`user_info ${isActive ? "active" : ""}`}>
             <div
-              className="primary-text user_detail"
+              className={`primary-text user_detail ${isActive ? "active" : ""}`}
               style={{ cursor: "pointer" }}
             >
-              <h4>{user.username}  {user.id}</h4>
+              <h4>{user.username} {user.id} </h4>
             </div>
             {/* <div
             className={`user_status ${user.isOnline ? "online" : "offline"}`}

@@ -3,6 +3,7 @@ importScripts('https://www.gstatic.com/firebasejs/9.6.2/firebase-messaging-compa
 // importScripts('/__/firebase/10.0.0/firebase-app-compat.js');
 // importScripts('/__/firebase/10.0.0/firebase-messaging-compat.js');
 // importScripts('/__/firebase/init.js');
+import {Howl} from 'howler';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvfmotOCQGfnPlXKs5W4SsR1W1NBueVbU",
@@ -17,21 +18,32 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
+const sentMessageSound = new Howl({
+  src: ['/sounds/notification.mp3'],
+});
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('Received background message ', payload);
+  const audioPath = '/sounds/notification.mp3';
 
-  // const notificationTitle = payload.notification.title;
-  const notificationTitle = "RANDOM TITLE FOR TESTING";
 
-  const notificationOptions = {
-    // body: payload.notification.body,
-    body: "TEST BODY",
+  // const sentMessageSound = new Howl({
+  //   src: [audioPath],
+  // });
 
-  };
+  sentMessageSound.play();
+  // console.log('Received background message ', payload);
+
+  // // const notificationTitle = payload.notification.title;
+  // const notificationTitle = "RANDOM TITLE FOR TESTING";
+
+  // const notificationOptions = {
+  //   // body: payload.notification.body,
+  //   body: "TEST BODY",
+
+  });
 
 
  
 
-  return self.registration.showNotification(notificationTitle, notificationOptions);
-});
+//   return self.registration.showNotification(notificationTitle, notificationOptions);
+// });

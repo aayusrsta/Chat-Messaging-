@@ -3,7 +3,6 @@ import { db, auth } from "../../firebase";
 import {
   collection,
   query,
-  where,
   onSnapshot,
   addDoc,
   Timestamp,
@@ -17,8 +16,9 @@ import Message from "../../Components/Messages";
 import MessageForm from "@/Components/MessageForm";
 import User from "@/Components/User";
 import Group from "@/Components/GroupChats";
-import { getMessaging, getToken, onMessage } from "@firebase/messaging";
 import useFcmToken from "@/utils/hooks/useFcmToken";
+import {Howl} from 'howler';
+import sound from "../../sounds/sendMessage.mp3"
 interface HomeProps {}
 
 interface UserData {
@@ -45,6 +45,9 @@ interface GroupChat {
 }
 
 const Home: React.FC<HomeProps> = () => {
+  const sentMessageSound = new Howl({
+    src: ['/sounds/sendMessage.mp3'],
+  });
   const [users, setUsers] = useState<UserData[]>([]);
   const [chat, setChat] = useState<UserData | null>(null);
   const [text, setText] = useState<string>("");
@@ -55,6 +58,8 @@ const Home: React.FC<HomeProps> = () => {
   const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<GroupChat | null>(null);
   const [availableUsers, setAvailableUsers] = useState<UserData[]>([]);
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
+
   const [addingMembersToGroup, setAddingMembersToGroup] =
     useState<boolean>(false);
 
@@ -154,18 +159,7 @@ const Home: React.FC<HomeProps> = () => {
     return () => unsub();
   }, [user1]);
 
-  // useEffect(() => {
-  //   const usersRef = collection(db, "users");
-  //   const q = query(usersRef, where("uid", "not-in", [user1]));
-  //   const unsub = onSnapshot(q, (querySnapshot) => {
-  //     let users: UserData[] = [];
-  //     querySnapshot.forEach((doc) => {
-  //       users.push(doc.data() as UserData);
-  //     });
-  //     setUsers((prevUsers) => [...prevUsers, ...users]);
-  //   });
-  //   return () => unsub();
-  // }, [user1]);
+
 
   const handleCreateGroup = () => {
     setIsCreatingGroup(true);
@@ -212,21 +206,34 @@ const Home: React.FC<HomeProps> = () => {
     };
 
     await setDoc(doc(db, "groups", groupId), updatedGroupData);
-
-
+    for (const memberId of selectedMembers) {
+      const memberToken = await getReceiverTokenForUser(memberId);
+      await saveFCMTokenForUser(memberId, memberToken);
+    }
     const topic = groupId;
     for (const memberId of selectedMembers) {
       const memberToken = await getReceiverTokenForUser(memberId);
+      console.log("Member Token==>", memberToken)
       if (memberToken) {
-        const subscribeResponse = await fetch("https://iid.googleapis.com/iid/v1/" + memberToken + "/rel/topics/" + topic, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "key=AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD", 
-          },
-        });
+        const subscribeResponse = await fetch(
+          "https://iid.googleapis.com/iid/v1/" +
+            memberToken +
+            "/rel/topics/" +
+            topic,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization:
+                "key=AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
+            },
+          }
+        );
         if (!subscribeResponse.ok) {
-          console.error("Error subscribing member to topic:", subscribeResponse.statusText);
+          console.error(
+            "Error subscribing member to topic:",
+            subscribeResponse.statusText
+          );
         }
       }
     }
@@ -249,6 +256,8 @@ const Home: React.FC<HomeProps> = () => {
     setChat(null);
 
     const id = group.id;
+    setActiveUserId(id);
+
     console.log("GROUP DETAIL:=====>", group);
 
     const msgsRef = collection(db, "group_messages", id, "chat");
@@ -272,7 +281,7 @@ const Home: React.FC<HomeProps> = () => {
   const selectUser = async (user: UserData) => {
     setSelectedGroup(null);
     setChat(user);
-
+    setActiveUserId(user.id);
     const user2 = user.id.toString();
     console.log("SECOND USERRR", user2);
     const id = user1 > user2 ? `${user1 + user2}` : `${user2 + user1}`;
@@ -296,6 +305,8 @@ const Home: React.FC<HomeProps> = () => {
   };
 
   const handleGroupChatSubmit = async (e: FormEvent) => {
+    sentMessageSound.play();
+
     e.preventDefault();
     if (!text.trim()) {
       return;
@@ -305,29 +316,59 @@ const Home: React.FC<HomeProps> = () => {
     }
 
     const id = selectedGroup.id;
-    const group_name=selectedGroup.name;
+    const group_name = selectedGroup.name;
     let url = "";
 
-    await addDoc(collection(db, "group_messages", id, "chat"), {
+    addDoc(collection(db, "group_messages", id, "chat"), {
       text,
       from: user1,
       createdAt: Timestamp.fromDate(new Date()),
       media: url || "",
     });
 
-    await setDoc(doc(db, "lastGrpMsg", id), {
+    setDoc(doc(db, "lastGrpMsg", id), {
       text,
       from: user1,
       createdAt: Timestamp.fromDate(new Date()),
       media: url || "",
       unread: true,
     });
+    setText("");
+
+    for (const memberId of selectedGroup.members) {
+      const memberToken = await getReceiverTokenForUser(memberId);
+      console.log("Member Token==>", memberToken);
+
+      if (memberToken) {
+        const subscribeResponse = await fetch(
+          "https://iid.googleapis.com/iid/v1/" +
+            memberToken +
+            "/rel/topics/" +
+            id,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization:
+                "key=AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
+            },
+          }
+        );
+        if (!subscribeResponse.ok) {
+          console.error(
+            "Error subscribing member to topic:",
+            subscribeResponse.statusText
+          );
+        }
+      }
+    }
+
     if (selectedGroup) {
       const topic = selectedGroup.id;
       const payload = {
         to: "/topics/" + topic,
         notification: {
-          title:group_name,
+          title: group_name,
           body: `${auth.currentUser?.displayName}: ${text}`,
         },
         data: {
@@ -336,13 +377,14 @@ const Home: React.FC<HomeProps> = () => {
           senderName: auth.currentUser?.displayName || "",
         },
       };
-  
+
       try {
         const response = await fetch("https://fcm.googleapis.com/fcm/send", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
+            Authorization:
+              "Bearer AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
           },
           body: JSON.stringify(payload),
         });
@@ -351,18 +393,20 @@ const Home: React.FC<HomeProps> = () => {
           console.log("Response Body:", responseBody);
         }
         if (!response.ok) {
-          console.error("Error sending push notification:", response.statusText);
+          console.error(
+            "Error sending push notification:",
+            response.statusText
+          );
         }
       } catch (error) {
         console.error("Error during fetch request:", error);
       }
     }
-
-
-    setText("");
   };
 
   const handleSubmit = async (e: FormEvent) => {
+    sentMessageSound.play();
+
     e.preventDefault();
     if (!text.trim()) {
       return;
@@ -376,7 +420,7 @@ const Home: React.FC<HomeProps> = () => {
 
     let url = "";
 
-    await addDoc(collection(db, "messages", id, "chat"), {
+    addDoc(collection(db, "messages", id, "chat"), {
       text,
       from: user1,
       to: user2,
@@ -384,7 +428,7 @@ const Home: React.FC<HomeProps> = () => {
       media: url || "",
     });
 
-    await setDoc(doc(db, "lastMsg", id), {
+    setDoc(doc(db, "lastMsg", id), {
       text,
       from: user1,
       to: user2,
@@ -393,6 +437,8 @@ const Home: React.FC<HomeProps> = () => {
       unread: true,
       senderName: auth.currentUser?.displayName || "",
     });
+    setText("");
+
     console.log("USER STRING PASSED IS ", user2);
     const receiverToken = await getReceiverTokenForUser(user2);
 
@@ -430,7 +476,6 @@ const Home: React.FC<HomeProps> = () => {
       console.error("Error during fetch request:", error);
     }
 
-    setText("");
   };
   const getReceiverTokenForUser = async (userId: string) => {
     try {
@@ -506,6 +551,7 @@ const Home: React.FC<HomeProps> = () => {
             user1={user1}
             chat={chat}
             isSelectable={isCreatingGroup}
+            isActive={activeUserId === user.id}
             isSelected={selectedMembers.includes(user.id.toString())}
             onAddMember={() => handleAddMember(user.id.toString())}
             onRemoveMember={() => handleRemoveMember(user.id.toString())}
@@ -518,6 +564,7 @@ const Home: React.FC<HomeProps> = () => {
               key={group.id}
               group={group}
               onSelectGroup={selectGrp}
+              isActive={activeUserId === group.id}
               user1={user1}
               handleAddMembersToGroup={showAvailableUsers}
             />
