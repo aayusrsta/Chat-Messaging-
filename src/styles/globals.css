@@ -585,4 +585,6 @@ input{
     align-items: center;
     margin: 15px 0px;
   }
-  
+  .side-nav{
+    background: #0d0d0d;
+  }
