@@ -24,7 +24,7 @@ interface GroupProps {
 }
 
 const Group: React.FC<GroupProps> = ({ group, onSelectGroup, user1, handleAddMembersToGroup, isActive }) => {
-  const isMember = group.members.includes(user1);
+  const isMember = group.members.includes(user1.toString());
 
   return (
     <div
@@ -40,9 +40,9 @@ const Group: React.FC<GroupProps> = ({ group, onSelectGroup, user1, handleAddMem
             {group.name} ({group.members.length})
           </h4>
           {/* <p>Members: {group.members.length}</p> */}
-          {isMember && (
+          {/* {isMember && (
       <button onClick={() => handleAddMembersToGroup(group)}>Add Members</button>
-    )}
+    )} */}
         </div>
       </div>
     </div>

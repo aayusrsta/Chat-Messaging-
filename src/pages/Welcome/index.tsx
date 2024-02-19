@@ -8,9 +8,7 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { auth, db } from "../../firebase";
-import { updateDoc, doc, addDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/router";
-import Image from "next/image";
 import useFcmToken from "@/utils/hooks/useFcmToken";
 
 interface LoginProps {}
@@ -173,17 +171,7 @@ const Welcome: React.FC<LoginProps> = () => {
             {loading ? "Logging in ..." : "Login"}
           </button>
         </div>
-      </form>
-      {/* <p>OR</p> */}
-      {/* <button className="sign-in">
-        <Image
-          src="/images/google-signin.png"
-          alt="Google Sign-In"
-          width={100}
-          height={50}
-          onClick={googleSignIn}
-        />
-      </button> */}
+      </form>   
     </div>
   );
 };

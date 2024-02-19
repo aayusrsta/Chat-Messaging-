@@ -1,4 +1,4 @@
-import React, { useEffect, useState, FormEvent } from "react";
+import React, { useEffect, useState, FormEvent, useMemo, memo } from "react";
 import { db, auth } from "../../firebase";
 import {
   collection,
@@ -18,8 +18,7 @@ import User from "@/Components/User";
 import Group from "@/Components/GroupChats";
 import useFcmToken from "@/utils/hooks/useFcmToken";
 import {Howl} from 'howler';
-import sound from "../../sounds/sendMessage.mp3"
-interface HomeProps {}
+import NavBar from "@/Components/NavBar";
 
 interface UserData {
   id: string;
@@ -44,7 +43,7 @@ interface GroupChat {
   createdBy: string;
 }
 
-const Home: React.FC<HomeProps> = () => {
+const Home = () => {
   const sentMessageSound = new Howl({
     src: ['/sounds/sendMessage.mp3'],
   });
@@ -205,38 +204,9 @@ const Home: React.FC<HomeProps> = () => {
       id: groupId,
     };
 
-    await setDoc(doc(db, "groups", groupId), updatedGroupData);
-    for (const memberId of selectedMembers) {
-      const memberToken = await getReceiverTokenForUser(memberId);
-      await saveFCMTokenForUser(memberId, memberToken);
-    }
+    await setDoc(doc(db, "groups", groupId), updatedGroupData);    
     const topic = groupId;
-    for (const memberId of selectedMembers) {
-      const memberToken = await getReceiverTokenForUser(memberId);
-      console.log("Member Token==>", memberToken)
-      if (memberToken) {
-        const subscribeResponse = await fetch(
-          "https://iid.googleapis.com/iid/v1/" +
-            memberToken +
-            "/rel/topics/" +
-            topic,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization:
-                "key=AAAA5QBu1dg:APA91bH0B19O_TDVXeH_qOTAF5VA83ZjBb5N-x6vBGzHhtEH8BbjU-f4Vj03GvWLBZcL9v-96_d01cObNKYJvOYqrS4gLNr_0hBpW65-UkMHff8C5HnJZO5SwUM0GrN9NA06E2rIvTHD",
-            },
-          }
-        );
-        if (!subscribeResponse.ok) {
-          console.error(
-            "Error subscribing member to topic:",
-            subscribeResponse.statusText
-          );
-        }
-      }
-    }
+    
 
     const groupMsgsRef = collection(db, "group_messages", groupId, "chat");
     await addDoc(groupMsgsRef, {
@@ -477,7 +447,7 @@ const Home: React.FC<HomeProps> = () => {
     }
 
   };
-  const getReceiverTokenForUser = async (userId: string) => {
+  const getReceiverTokenForUser = useMemo(() =>async (userId: string) => {
     try {
       const id = userId;
       const userDoc = await getDoc(doc(db, "users", `${id}`));
@@ -501,7 +471,7 @@ const Home: React.FC<HomeProps> = () => {
       console.error(`Error fetching user document for ${userId}:`, error);
       return "";
     }
-  };
+  }, []);
 
   console.log("THE CURRENT USER DETAILS:", auth.currentUser);
 
@@ -511,8 +481,10 @@ const Home: React.FC<HomeProps> = () => {
   };
 
   return (
+    <>
+    <NavBar selectedGroup={selectedGroup} getReceiverTokenForUser={getReceiverTokenForUser} />
     <div className="home_container">
-      <div className="side-nav">
+       <div className="side-nav">
         <div className="group_creation">
           <button
             onClick={handleCreateGroup}
@@ -619,9 +591,11 @@ const Home: React.FC<HomeProps> = () => {
           <>
             <div className="messages_user">
               <h3 className="no_conv">{selectedGroup.name}</h3>
+              <button onClick={() => showAvailableUsers(selectedGroup)} className="add_members_btn">Add Members</button>
+
             </div>
             <div className="messages">
-              <p style={{ textAlign: "center" }}>
+              <p style={{ textAlign: "center", color:"wheat", }}>
                 {selectedGroup.createdBy} created the group
               </p>
               {msgs.length
@@ -646,7 +620,8 @@ const Home: React.FC<HomeProps> = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
-export default Home;
+export default memo(Home);

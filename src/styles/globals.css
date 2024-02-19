@@ -449,6 +449,7 @@ input{
     text-align: center;
     border-bottom: 2px solid var(--color-6);
     color: white;
+    position: relative;
   }
   .no_conv {
     font-size: 25px;
@@ -587,4 +588,12 @@ input{
   }
   .side-nav{
     background: #0d0d0d;
+  }
+  .hidden{
+    display: none;
+  }
+  .add_members_btn{
+    position: absolute;
+    top: 36%;
+    right: 15px;
   }
